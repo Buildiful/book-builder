@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="Book Builder: a free, private, browser-based paperback formatting and cover creation studio.">
+  <title>Book Builder by Buildiful®</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell" id="appShell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div><div class="brand-name">Book Builder<span class="brand-dot">.</span></div><div class="brand-by">AN OPEN BOOK STUDIO</div></div>
+      </div>
+      <div class="sidebar-caption">YOUR WORKSPACE</div>
+      <nav class="section-nav" aria-label="Workspace views">
+        <button type="button" class="nav-button active" data-panel="manuscript"><span class="nav-icon">▤</span><span>Manuscript</span><span class="nav-number">01</span></button>
+        <button type="button" class="nav-button" data-panel="format"><span class="nav-icon">◫</span><span>Book format</span><span class="nav-number">02</span></button>
+        <button type="button" class="nav-button" data-panel="cover"><span class="nav-icon">▧</span><span>Cover studio</span><span class="nav-number">03</span></button>
+        <button type="button" class="nav-button" data-panel="export"><span class="nav-icon">↗</span><span>Export & check</span><span class="nav-number">04</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="privacy-box"><span class="privacy-indicator"></span><div><strong>Private by design</strong><p>Your manuscript stays in your browser. No account or upload required.</p></div></div>
+        <div class="sidebar-foot">BUILD ANYTHING YOURSELF<br><span>© 2026 Buildiful® · Version 1.0.0</span></div>
+      </div>
+    </aside>
+
+    <main class="workspace">
+      <header class="topbar">
+        <div class="topbar-left"><span id="breadcrumb">Workspace / Manuscript</span><span class="topbar-separator">/</span><span class="draft-label">LOCAL DRAFT</span></div>
+        <div class="topbar-actions"><button type="button" class="btn btn-quiet" id="loadProjectButton">Open project</button><button type="button" class="btn btn-outline" id="saveProjectButton">Save project ↓</button><button type="button" class="btn btn-primary" id="topExportButton">Export &amp; check ↗</button></div>
+      </header>
+
+      <div class="workspace-content">
+        <section class="control-panel" aria-label="Book builder controls">
+          <div class="panel-view active" id="panel-manuscript">
+            <div class="eyebrow">01 / THE STORY</div><h1>Start with your <em>words.</em></h1><p class="subheading">Bring a finished manuscript, make a few thoughtful edits, and let Book Builder handle the pages.</p>
+            <div class="upload-card" id="dropZone" tabindex="0" role="button" aria-label="Import manuscript file">
+              <div class="upload-icon">↥</div><div class="upload-title">Drop your manuscript here</div><div class="upload-subtitle">DOCX, TXT, or Markdown · or browse files</div><button type="button" class="btn btn-dark" id="importButton">Choose a file</button>
+              <input type="file" id="manuscriptFile" accept=".docx,.txt,.md,.markdown" hidden>
+            </div>
+            <div class="panel-divider"><span>OR WRITE HERE</span></div>
+            <div class="field-group"><label for="bookTitle">Book title</label><input type="text" id="bookTitle" value="The Little Book of Making Things" maxlength="180"></div>
+            <div class="field-row"><div class="field-group"><label for="bookAuthor">Author</label><input type="text" id="bookAuthor" value="Your Name" maxlength="120"></div><div class="field-group"><label for="bookSubtitle">Subtitle</label><input type="text" id="bookSubtitle" value="A field guide to starting" maxlength="180"></div></div>
+            <div class="editor-header"><span>MANUSCRIPT EDITOR</span><span class="editor-tip">Tip: use Heading 1 for chapters</span></div>
+            <div class="editor-toolbar" role="toolbar" aria-label="Formatting">
+              <select id="paragraphStyle" aria-label="Paragraph style"><option value="p">Body text</option><option value="h1">Chapter heading</option><option value="h2">Section heading</option><option value="blockquote">Quote</option></select>
+              <button type="button" class="tool-btn" data-command="bold" title="Bold"><b>B</b></button><button type="button" class="tool-btn" data-command="italic" title="Italic"><i>I</i></button><button type="button" class="tool-btn" id="insertImageButton" title="Insert image">▧</button><button type="button" class="tool-btn" id="insertChapterButton" title="New chapter">¶+</button>
+              <input type="file" id="inlineImageFile" accept="image/png,image/jpeg,image/webp" hidden>
+            </div>
+            <div id="editor" class="manuscript-editor" contenteditable="true" spellcheck="true" aria-label="Manuscript content"></div>
+            <div class="editor-footer"><span id="wordCount">0 words</span><button type="button" class="link-button" id="sampleButton">Restore example</button></div>
+          </div>
+
+          <div class="panel-view" id="panel-format">
+            <div class="eyebrow">02 / TYPESETTING</div><h1>Make every page <em>count.</em></h1><p class="subheading">A few precise choices give your paperback the feel of a professionally composed book.</p>
+            <div class="setting-section-label">THE PAGE</div>
+            <div class="field-row"><div class="field-group"><label for="trimSize">Trim size</label><select id="trimSize"><option value="6x9">6 × 9 in — standard</option><option value="5x8">5 × 8 in — compact</option><option value="5.5x8.5">5.5 × 8.5 in</option><option value="8.5x11">8.5 × 11 in — workbook</option></select></div><div class="field-group"><label for="paperType">Paper</label><select id="paperType"><option value="white">White</option><option value="cream">Cream</option></select></div></div>
+            <div class="field-row"><div class="field-group"><label for="insideMargin">Inside margin (in)</label><input type="number" id="insideMargin" value="0.75" min="0.375" max="2" step="0.05"></div><div class="field-group"><label for="outsideMargin">Outside margin (in)</label><input type="number" id="outsideMargin" value="0.65" min="0.25" max="2" step="0.05"></div></div>
+            <div class="field-row"><div class="field-group"><label for="topMargin">Top margin (in)</label><input type="number" id="topMargin" value="0.82" min="0.3" max="2" step="0.05"></div><div class="field-group"><label for="bottomMargin">Bottom margin (in)</label><input type="number" id="bottomMargin" value="0.79" min="0.3" max="2" step="0.05"></div></div>
+            <div class="setting-section-label">THE TYPOGRAPHY</div>
+            <div class="field-group"><label for="bodyFont">Body typeface</label><select id="bodyFont"><option value="Georgia">Georgia — timeless serif</option><option value="Palatino Linotype">Palatino — literary serif</option><option value="Times New Roman">Times New Roman — classic serif</option><option value="Arial">Arial — clean sans serif</option></select></div>
+            <div class="field-row"><div class="field-group"><label for="fontSize">Type size (pt)</label><input type="number" id="fontSize" value="11" min="8" max="16" step="0.5"></div><div class="field-group"><label for="lineHeight">Line spacing</label><select id="lineHeight"><option value="1.28">Comfortable 1.28</option><option value="1.4">Airy 1.40</option><option value="1.18">Compact 1.18</option><option value="1.55">Spacious 1.55</option></select></div></div>
+            <div class="setting-section-label">BOOK DETAILS</div>
+            <label class="toggle-row"><span><strong>Mirrored gutters</strong><small>Extra inner space beside the spine</small></span><input type="checkbox" id="mirrorMargins" checked><span class="switch"></span></label>
+            <label class="toggle-row"><span><strong>Chapter starts on new page</strong><small>Heading 1 creates a page break</small></span><input type="checkbox" id="chapterBreaks" checked><span class="switch"></span></label>
+            <label class="toggle-row"><span><strong>Page numbers</strong><small>Discreet, centered at page foot</small></span><input type="checkbox" id="showPageNumbers" checked><span class="switch"></span></label>
+            <label class="toggle-row"><span><strong>Running title</strong><small>Print the book title in the header</small></span><input type="checkbox" id="showRunningTitle"><span class="switch"></span></label>
+            <div class="tip-card"><strong>Made for KDP, but not KDP only.</strong><p>Book Builder creates single-page, no-bleed interiors. Fully bleeding photos and highly complex tables need another workflow in this version.</p></div>
+          </div>
+
+          <div class="panel-view" id="panel-cover">
+            <div class="eyebrow">03 / THE FIRST IMPRESSION</div><h1>Give it a <em>cover.</em></h1><p class="subheading">Design a full-wrap paperback cover that automatically follows your book's final page count.</p>
+            <div class="setting-section-label">COLOR STORY</div>
+            <div class="swatches" id="themeSwatches"><button type="button" data-theme="ink" class="swatch active" title="Midnight ink"><span style="background:#182b3a"></span>Ink</button><button type="button" data-theme="clay" class="swatch" title="Terracotta"><span style="background:#a25248"></span>Clay</button><button type="button" data-theme="olive" class="swatch" title="Olive"><span style="background:#526951"></span>Olive</button><button type="button" data-theme="plum" class="swatch" title="Plum"><span style="background:#584264"></span>Plum</button><button type="button" data-theme="paper" class="swatch" title="Paper"><span style="background:#efe9db"></span>Paper</button></div>
+            <div class="field-group"><label for="coverKicker">Short line above title</label><input type="text" id="coverKicker" value="A BEGINNER'S FIELD GUIDE" maxlength="80"></div>
+            <div class="field-group"><label for="coverImprint">Imprint / publisher line</label><input type="text" id="coverImprint" value="" placeholder="Optional imprint name" maxlength="100"></div>
+            <div class="field-group"><label for="backBlurb">Back cover description</label><textarea id="backBlurb" rows="6">Every idea begins with the courage to make something. This little guide is an invitation to begin with what you have, learn as you go, and enjoy every experiment along the way.</textarea></div>
+            <div class="field-group"><label for="coverImage">Optional cover artwork</label><div class="inline-upload"><button type="button" class="btn btn-outline" id="artworkButton">Choose image</button><button type="button" class="link-button" id="removeArtworkButton">Remove</button><span id="artworkName">No image selected</span></div><input type="file" id="coverImage" hidden accept="image/jpeg,image/png,image/webp"></div>
+            <div class="tip-card"><strong>Barcode reserved automatically.</strong><p>The PDF leaves a clear area on the bottom-right of the back cover. If you let KDP provide the ISBN, it can add the barcode when you upload.</p></div>
+          </div>
+
+          <div class="panel-view" id="panel-export">
+            <div class="eyebrow">04 / THE FINISHING TOUCHES</div><h1>Ready for the <em>world?</em></h1><p class="subheading">Check the essentials, save both print PDFs, then upload them to Kindle Direct Publishing.</p>
+            <div class="export-stat-grid"><div><strong id="statPages">—</strong><span>Interior pages</span></div><div><strong id="statSpine">—</strong><span>Spine width (in)</span></div></div>
+            <div class="setting-section-label">BEFORE YOU EXPORT</div><div id="checks" class="check-list"></div>
+            <div class="export-actions"><button type="button" class="btn btn-primary btn-large" id="exportInterior">↧ Save interior PDF</button><button type="button" class="btn btn-dark btn-large" id="exportCover">↧ Save cover PDF</button><button type="button" class="btn btn-outline btn-large" id="exportEbookCover">↧ Download eBook cover PNG</button></div>
+            <div class="print-help"><strong>How the PDF buttons work</strong><p>Your browser's print dialog opens with the correct custom paper size. Choose <b>Save as PDF</b>, use <b>100% scale</b>, disable headers and footers, and keep margins at <b>None</b>. The interior and cover print as separate PDFs. Set any browser dialog options required to reproduce the preview exactly.</p></div>
+            <div class="tip-card note"><strong>Final KDP check is essential.</strong><p>Review every page and both files in KDP's Print Previewer before publishing. Book Builder does not guarantee KDP acceptance.</p></div>
+          </div>
+        </section>
+
+        <section class="preview-panel" aria-label="Book preview">
+          <div class="preview-toolbar"><div class="preview-toolbar-left"><span class="preview-dot"></span><strong>Live preview</strong><span id="previewStatus">Preparing pages</span></div><div class="preview-toolbar-right"><div class="segmented" role="group" aria-label="Preview mode"><button type="button" id="previewInterior" class="selected">Interior</button><button type="button" id="previewCover">Cover</button></div><select id="previewZoom" aria-label="Preview scale"><option value="0.64">64%</option><option value="0.78" selected>78%</option><option value="0.92">92%</option><option value="1">100%</option></select></div></div>
+          <div class="preview-scroll" id="previewScroll"><div class="preview-stage" id="interiorStage"><div class="preview-pages" id="previewPages"></div></div><div class="preview-stage cover-stage hidden" id="coverStage"><div class="cover-preview-wrapper" id="coverPreviewWrapper"><div id="coverPreview"></div></div><div class="cover-caption">Back cover · Spine · Front cover</div></div></div>
+          <div class="preview-bottom"><span id="previewSummary">—</span><span>Made with Book Builder · Designed for your hands</span></div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="printRoot" aria-hidden="true"></div>
+  <input type="file" id="projectFile" accept=".json,.bookbuilder" hidden>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js" defer></script>
+</body>
+</html>
