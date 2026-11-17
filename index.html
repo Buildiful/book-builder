@@ -41,7 +41,7 @@
       </nav>
       <div class="sidebar-bottom">
         <div class="privacy-box"><span class="privacy-indicator"></span><div><strong>Private by design</strong><p>Your manuscript stays in your browser. No account or upload required.</p></div></div>
-        <div class="sidebar-foot">BUILD ANYTHING YOURSELF<br><span>© 2026 Buildiful® · Version 1.0.0</span></div>
+        <div class="sidebar-foot">BUILD ANYTHING YOURSELF<br><span>© 2026 Buildiful® · Version 1.1.0</span></div>
       </div>
     </aside>
 
@@ -70,6 +70,18 @@
             </div>
             <div id="editor" class="manuscript-editor" contenteditable="true" spellcheck="true" aria-label="Manuscript content"></div>
             <div class="editor-footer"><span id="wordCount">0 words</span><button type="button" class="link-button" id="sampleButton">Restore example</button></div>
+            <section class="illustration-panel hidden" id="illustrationPanel" aria-label="Selected illustration settings">
+              <div class="illustration-header"><strong>ILLUSTRATION SETTINGS</strong><button type="button" class="link-button" id="deselectFigure">Done ✕</button></div>
+              <p class="illustration-hint">Adjust the image selected in your manuscript. Size is relative to the printable text area.</p>
+              <div class="field-row"><div class="field-group"><label for="figureWidth">Image width</label><select id="figureWidth"><option value="auto">Fit naturally</option><option value="100">Full width</option><option value="75">75% width</option><option value="50">50% width</option><option value="custom">Custom inches</option></select></div><div class="field-group"><label for="figureAlignment">Alignment</label><select id="figureAlignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></div></div>
+              <div class="field-group hidden" id="figureCustomWidthWrap"><label for="figureCustomWidth">Custom width (inches)</label><input id="figureCustomWidth" type="number" min="0.5" max="8" step="0.1" value="3.0"><small class="illustration-small">Automatically limited to the page's printable width.</small></div>
+              <div class="field-group"><label for="figureCaption">Caption</label><input type="text" id="figureCaption" maxlength="300" placeholder="Optional description beneath the image"></div>
+              <label class="illustration-check"><input type="checkbox" id="figureNumbered"> Prefix caption with an automatic figure number</label>
+              <label class="illustration-check"><input type="checkbox" id="figureNewPage"> Start this illustration on a new page</label>
+              <div id="figureQuality" class="illustration-quality" aria-live="polite">Checking image resolution…</div>
+              <button type="button" class="link-button" id="removeFigure">Remove illustration</button>
+            </section>
+            <p class="illustration-hint illustration-entry-hint">Tip: click an illustration in the editor to adjust its size, alignment, caption and page placement.</p>
           </div>
 
           <div class="panel-view" id="panel-format">

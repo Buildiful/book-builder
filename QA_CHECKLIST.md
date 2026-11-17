@@ -1,8 +1,22 @@
 # Book Builder — release validation checklist
 
-**Version 1.0.0.** This checklist separates technical smoke tests from real KDP acceptance testing. Do not claim KDP compliance based solely on generated PDF dimensions.
+**Version 1.1.0.** This checklist separates technical smoke tests from real KDP acceptance testing. Do not claim KDP compliance based solely on generated PDF dimensions.
 
-## Automated browser checks performed on this build
+## Browser checks performed on v1.1.0 (headless Chromium)
+
+- [x] Inserted a PNG through the image picker and opened its selection controls.
+- [x] Applied width, alignment, caption, automatic numbering, and new-page settings; confirmed changes in print preview.
+- [x] Saved/reloaded a project and confirmed figure metadata and captions persisted.
+- [x] Opened a simulated v1.0.0 project without figure metadata.
+- [x] Imported an image-bearing DOCX and confirmed it appeared as an editable figure.
+- [x] Tested a low-resolution raster image: interior preflight flagged a 39 PPI example.
+- [x] Tested custom 1-inch image width and a tall portrait image with no overflow.
+- [x] Sanitized loaded figure markup to reject event handlers and unsafe image URLs.
+- [x] Exported a 6 × 9-inch, three-page test interior PDF, verified all page dimensions at 432 × 648 points, and detected no JavaScript page errors.
+
+These tests use an isolated headless browser and a test manuscript, **not** a full real-world KDP acceptance test.
+
+## Earlier v1.0.0 browser checks (retained)
 
 - [x] App initialized in headless Chromium without JavaScript page errors.
 - [x] Imported a DOCX containing headings, body text and a raster image.
@@ -16,12 +30,12 @@
 
 ## Additional manual validation recommended
 
-- [ ] Import your real manuscript and compare chapter headings, paragraphs and images to the original DOCX.
+- [ ] Import your real manuscript and compare chapter headings, paragraphs, images, captions and positions to the original DOCX.
 - [ ] Proofread at least the first, middle, and final page of a complete 24+ page interior.
 - [ ] Inspect chapter boundaries for blank pages, isolated headings, widows and orphans.
 - [ ] Export through the actual Chrome/Edge print dialog on macOS, with 100% scale, margins None, no headers/footers.
 - [ ] Verify actual PDF page sizes, single-page interior, full-wrap cover, and embedded fonts (Acrobat or `pdfinfo`/`pdffonts`).
-- [ ] Verify print artwork resolution using images used in the real book; replace anything below 300 PPI.
+- [ ] Verify print artwork resolution and UI legibility at actual print size using the real book; replace anything below 300 PPI.
 - [ ] Upload interior and cover to the **KDP Print Previewer** with the selected trim, paper and ink settings; fix every reported issue.
 - [ ] Test cover spine and safe area at actual final page count, including barcode placement.
 - [ ] Test a physical proof copy before promising authors professional print output.

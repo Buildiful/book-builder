@@ -13,3 +13,30 @@
   #printRoot .print-cover-svg svg{display:block;width:100%;height:100%}
 }
 .page-content ul,.page-content ol{padding-left:.25in;margin:0 0 .16in}.page-content li{margin-bottom:.05in}.page-content p,.page-content h1,.page-content h2{overflow-wrap:anywhere}.page-content .split-probe{display:contents}
+
+/* Book Builder 1.1.0 — illustration editing and reliable paperback placement. */
+.illustration-panel{margin-top:16px;border:1px solid #d6e2de;border-radius:10px;background:#f8faf9;padding:16px}
+.illustration-header{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:1.4px;color:#526673}
+.illustration-hint{font-size:11px;line-height:1.55;color:#6f848b;margin:8px 0 13px}.illustration-entry-hint{margin:8px 0}
+.illustration-panel .field-group{margin-bottom:11px}.illustration-panel .field-group input,.illustration-panel .field-group select{background:#fff}
+.illustration-small{display:block;color:#7d8b8d;font-size:10px;line-height:1.5;margin-top:5px}
+.illustration-check{display:flex;align-items:flex-start;gap:8px;margin:12px 0;color:#465c65;font-size:11px;line-height:1.45}.illustration-check input{margin:1px 0 0;flex:none}
+.illustration-quality{border-radius:6px;background:#eaf4ee;color:#37624d;font-size:11px;padding:11px;margin:12px 0}
+.illustration-quality.warn{background:#fff0e4;color:#87513b}
+.manuscript-editor figure{position:relative;margin:12px 0;padding:9px;border:1px dashed #b9c9c3;border-radius:5px;text-align:center;cursor:pointer;user-select:none}
+.manuscript-editor figure img{display:block;max-width:100%;max-height:180px;width:auto;height:auto;margin:auto}
+.manuscript-editor figure figcaption{font:italic 11px/1.45 Georgia,serif;color:#687c7c;margin:6px 0 0;overflow-wrap:anywhere}
+.manuscript-editor figure.selected-figure{background:#e9f3ef;outline:2px solid #78a998;outline-offset:1px}
+.manuscript-editor figure[data-align="left"] img{margin-left:0;margin-right:auto}
+.manuscript-editor figure[data-align="right"] img{margin-left:auto;margin-right:0}
+/* Width here is a preview only; exact printed width depends on available text area. */
+.manuscript-editor figure[data-width="50"] img{max-width:50%}
+.manuscript-editor figure[data-width="75"] img{max-width:75%}
+.page-content figure{width:100%;max-width:100%;margin:0 auto .16in;break-inside:avoid;page-break-inside:avoid;text-align:center}
+.page-content figure[data-align="left"]{margin-left:0;margin-right:auto;text-align:left}
+.page-content figure[data-align="right"]{margin-right:0;margin-left:auto;text-align:right}
+.page-content figure img{display:block;width:100%;height:auto;max-width:100%;max-height:var(--figure-height-limit,6in);object-fit:contain;margin:0 auto}
+.page-content figure[data-width="auto"] img{width:auto;max-width:100%}
+.page-content figure[data-align="left"] img{margin-left:0;margin-right:auto}
+.page-content figure[data-align="right"] img{margin-left:auto;margin-right:0}
+.page-content figure figcaption{font:italic 8pt/1.4 Georgia,serif;color:#777;margin-top:.07in;overflow-wrap:anywhere}

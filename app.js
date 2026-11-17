@@ -29,7 +29,7 @@
     <p>Now make the smallest possible version. A drawing counts. A rough prototype counts. So does a single page of words describing the thing you hope to build.</p>
     <p>Progress is not always dramatic. Often it looks like a quiet afternoon, a notebook full of crossed-out possibilities, and one little decision to keep going.</p>
     <p>Remember: the point is not to create something perfect on the first attempt. The point is to create something that did not exist yesterday.</p>`;
-  const state = {theme:'ink',coverArt:null,coverImageInfo:null,pages:[],pageCount:0,previewMode:'interior',timer:null,toastTimer:null,sourceName:'Untitled',busy:false,projectVersion:1};
+  const state = {theme:'ink',coverArt:null,coverImageInfo:null,pages:[],pageCount:0,previewMode:'interior',timer:null,toastTimer:null,sourceName:'Untitled',busy:false,projectVersion:1,selectedFigure:null,savedRange:null};
 
   function notify(message, ms=4500) { const toast=$('toast'); toast.textContent=message; toast.classList.add('show'); clearTimeout(state.toastTimer); state.toastTimer=setTimeout(()=>toast.classList.remove('show'),ms); }
   function clamp(n,min,max,def){const x=Number(n);return Number.isFinite(x)?Math.max(min,Math.min(max,x)):def;}
@@ -44,6 +44,7 @@
     page.style.setProperty('--trim-width',`${s.w}in`);page.style.setProperty('--trim-height',`${s.h}in`);
     page.style.setProperty('--body-font',`"${s.font}", Georgia, serif`);page.style.setProperty('--font-size',`${s.size}pt`);page.style.setProperty('--line-height',s.leading);
     page.style.setProperty('--top-margin',`${s.top}in`);page.style.setProperty('--bottom-margin',`${s.bottom}in`);
+    page.style.setProperty('--figure-height-limit',`${Math.max(1,s.h-s.top-s.bottom-.46).toFixed(3)}in`);
     const isOdd=n%2===1;const left=s.mirror ? (isOdd?s.inside:s.outside) : s.inside;const right=s.mirror ? (isOdd?s.outside:s.inside) : s.outside;
     page.style.setProperty('--page-left',`${left}in`);page.style.setProperty('--page-right',`${right}in`);
   }
@@ -69,6 +70,96 @@
     const left=sectionOf(block,0,fit),right=sectionOf(block,fit,total);if(!left.textContent.trim()||!right.textContent.trim())return null;
     return [left,right];
   }
+  // Figure data lives on the FIGURE itself. The same data survives project save/open
+  // and is used by live preview, browser printing, and print-quality preflight.
+  function figureWidthValue(fig){
+    const mode=fig.dataset.width||'auto';
+    if(['50','75','100'].includes(mode))return `${mode}%`;
+    if(mode==='custom')return `${clamp(fig.dataset.customWidth,.5,8,3)}in`;
+    return '100%';
+  }
+  function prepareFigure(fig){
+    fig.style.width=figureWidthValue(fig);
+    fig.style.maxWidth='100%';
+    if((fig.dataset.width||'auto')==='auto')fig.style.width='100%';
+  }
+  function fitFigureIfNecessary(fig,content){
+    if(!overflowing(content))return true;
+    // Only shrink images when their own otherwise-empty page would overflow.
+    // The scale remains on the page clone and therefore reaches the printed PDF.
+    const natural=figureWidthValue(fig);
+    for(let scale=.95;scale>=.30;scale-=.05){
+      fig.style.width=`calc(${natural} * ${scale.toFixed(2)})`;
+      fig.querySelector('img')?.style.setProperty('width','100%');
+      if(!overflowing(content))return true;
+    }
+    return false;
+  }
+  function enhanceEditorFigures(){
+    for(const fig of $('editor').querySelectorAll('figure')){
+      fig.setAttribute('contenteditable','false');
+      fig.setAttribute('tabindex','0');
+      fig.setAttribute('role','button');
+      fig.setAttribute('aria-label','Select illustration settings');
+    }
+  }
+  function rememberEditorRange(){
+    const sel=window.getSelection();if(!sel||!sel.rangeCount)return;
+    const range=sel.getRangeAt(0);
+    if($('editor').contains(range.commonAncestorContainer))state.savedRange=range.cloneRange();
+  }
+  function clearFigureSelection(){
+    state.selectedFigure?.classList.remove('selected-figure');state.selectedFigure=null;
+    $('illustrationPanel').classList.add('hidden');
+  }
+  function selectFigure(fig){
+    if(!fig||!$('editor').contains(fig))return;
+    clearFigureSelection();state.selectedFigure=fig;fig.classList.add('selected-figure');
+    $('illustrationPanel').classList.remove('hidden');
+    $('figureWidth').value=['auto','50','75','100','custom'].includes(fig.dataset.width)?fig.dataset.width:'auto';
+    $('figureCustomWidth').value=clamp(fig.dataset.customWidth,.5,8,3);
+    $('figureCustomWidthWrap').classList.toggle('hidden',$('figureWidth').value!=='custom');
+    $('figureAlignment').value=['left','center','right'].includes(fig.dataset.align)?fig.dataset.align:'center';
+    $('figureCaption').value=fig.querySelector('figcaption')?.textContent||'';
+    $('figureNumbered').checked=fig.dataset.numbered==='true';
+    $('figureNewPage').checked=fig.dataset.newPage==='true';
+    updateSelectedFigureQuality();
+  }
+  function applyFigureControls(){
+    const fig=state.selectedFigure;if(!fig||!$('editor').contains(fig))return;
+    fig.dataset.width=$('figureWidth').value;
+    fig.dataset.customWidth=String(clamp($('figureCustomWidth').value,.5,8,3));
+    fig.dataset.align=$('figureAlignment').value;
+    fig.dataset.numbered=String($('figureNumbered').checked);
+    fig.dataset.newPage=String($('figureNewPage').checked);
+    $('figureCustomWidthWrap').classList.toggle('hidden',fig.dataset.width!=='custom');
+    const caption=$('figureCaption').value.trim();let cap=fig.querySelector('figcaption');
+    if(caption){if(!cap){cap=document.createElement('figcaption');fig.append(cap);}cap.textContent=caption;}
+    else cap?.remove();
+    scheduleLayout();
+  }
+  function measureDpi(img){
+    if(!img||!img.naturalWidth||!img.naturalHeight||!img.offsetWidth||!img.offsetHeight)return null;
+    // Account for object-fit:contain when a tall image reaches the page height limit.
+    const pxW=img.offsetWidth,pxH=img.offsetHeight,ratio=img.naturalWidth/img.naturalHeight;
+    const drawnW=Math.min(pxW,pxH*ratio),drawnH=Math.min(pxH,pxW/ratio);
+    return Math.floor(Math.min(img.naturalWidth/(drawnW/96),img.naturalHeight/(drawnH/96)));
+  }
+  function interiorImageMetrics(){return [...$('previewPages').querySelectorAll('.page-content figure img')].map(im=>measureDpi(im));}
+  function updateSelectedFigureQuality(){
+    const fig=state.selectedFigure,el=$('figureQuality');if(!fig)return;
+    const figures=[...$('editor').querySelectorAll('figure')];const index=figures.indexOf(fig);
+    const img=$('previewPages').querySelectorAll('.page-content figure img')[index];
+    const dpi=measureDpi(img);el.classList.toggle('warn',dpi!==null&&dpi<300);
+    el.textContent=dpi===null?'Image resolution is still loading.':`${dpi} PPI at its current printed size${dpi<300?' — below the suggested 300 PPI.':' — suitable resolution for print.'}`;
+  }
+  function waitForEditorImages(){
+    const images=[...$('editor').querySelectorAll('img')];
+    return Promise.all(images.map(im=>im.decode().catch(()=>{throw new Error('One or more manuscript images could not be decoded.');})));
+  }
+  function relayoutWhenImagesReady(){
+    waitForEditorImages().then(relayout).catch(e=>notify(e.message,9000));
+  }
   function normalBlocks(){const result=[];for(const child of [...$('editor').childNodes]){
       if(child.nodeType===Node.TEXT_NODE){if(child.textContent.trim()){const p=document.createElement('p');p.textContent=child.textContent;result.push(p);}continue;}
       if(child.nodeType!==Node.ELEMENT_NODE)continue;
@@ -80,9 +171,15 @@
   function relayout(){
     const interior=$('interiorStage'),wasHidden=interior.classList.contains('hidden');if(wasHidden)interior.classList.remove('hidden');
     const s=getSettings();const area=$('previewPages');area.innerHTML='';const blocks=normalBlocks();state.pages=[];
-    let n=1,current=newPage(s,1),count=0;state.pages.push(current.page);
+    let n=1,current=newPage(s,1),count=0,figureCount=0;state.pages.push(current.page);
     const next=()=>{n+=1;current=newPage(s,n);state.pages.push(current.page);};
     for(const block of blocks){if(count++>20000){notify('This manuscript is too complex for the preview.');break;}
+      if(block.tagName==='FIGURE'){
+        prepareFigure(block);
+        const cap=block.querySelector('figcaption');
+        if(cap&&block.dataset.numbered==='true'){figureCount++;cap.textContent=`Figure ${figureCount}. ${cap.textContent}`;}
+        if(block.dataset.newPage==='true'&&current.content.children.length>0)next();
+      }
       if(block.tagName==='H1'&&s.chapters&&current.content.children.length>0)next();
       current.content.append(block);
       if(!overflowing(current.content))continue;
@@ -107,7 +204,10 @@
       }else{
         if(current.content.children.length>0)next();
         current.content.append(block);
-        if(overflowing(current.content))current.page.dataset.overflow='true';
+        if(overflowing(current.content)){
+          if(tag==='figure'&&fitFigureIfNecessary(block,current.content))continue;
+          current.page.dataset.overflow='true';
+        }
       }
     }
     if(state.pages.length>1&&state.pages[state.pages.length-1].querySelector('.page-content').children.length===0){state.pages.pop();area.lastElementChild.remove();}
@@ -118,7 +218,7 @@
     $('statPages').textContent=state.pageCount;
     $('statSpine').textContent=spineWidth().toFixed(3);
     if(wasHidden)interior.classList.add('hidden');
-    renderCover();updateChecks();
+    renderCover();updateChecks();updateSelectedFigureQuality();
   }
   function scheduleLayout(){clearTimeout(state.timer);$('previewStatus').textContent='Composing pages…';state.timer=setTimeout(relayout,320);}
   function spineWidth(){return state.pageCount*(getSettings().paper==='cream'?.0025:.002252);}
@@ -131,12 +231,15 @@
   function requiredGutter(p){if(p<=150)return .375;if(p<=300)return .5;if(p<=500)return .625;if(p<=700)return .75;return .875;}
   function checkItem(ok,text){return `<div class="check-item ${ok?'':'warn'}"><span class="check-symbol">${ok?'✓':'!'}</span><span>${escapeHtml(text)}</span></div>`;}
   function updateChecks(){const s=getSettings(),p=state.pageCount,inner=s.mirror?Math.min(s.inside,s.outside):s.inside;
-    const overflow=state.pages.some(x=>x.dataset.overflow==='true');const checks=[
+    const overflow=state.pages.some(x=>x.dataset.overflow==='true');
+    const dpis=interiorImageMetrics(),low=dpis.filter(x=>x!==null&&x<300),pending=dpis.filter(x=>x===null);
+    const checks=[
       [p>=24&&p<=828,p<24?`Only ${p} pages. Most KDP paperbacks require at least 24 pages.`:p>828?'Above 828 pages. Check your chosen KDP trim/ink limits.':'Page count is in the standard 24–828 paperback range.'],
       [s.inside>=requiredGutter(p),`Inside margin: ${s.inside.toFixed(2)} in (KDP minimum for this page count: ${requiredGutter(p).toFixed(3)} in).`],
       [s.outside>=.25,`Outside margin: ${s.outside.toFixed(2)} in (no-bleed minimum: 0.25 in).`],
       [s.top>=.25&&s.bottom>=.25,`Top and bottom margins: ${s.top.toFixed(2)} / ${s.bottom.toFixed(2)} in.`],
-      [!overflow,overflow?'At least one block exceeds the printable text area. Resize a large image or edit a long unbreakable line.':'No detected block overflow in the current pagination.'],
+      [!overflow,overflow?'At least one block exceeds the printable text area. Shorten a caption, resize an illustration, or edit an unbreakable line.':'No detected block overflow in the current pagination.'],
+      [!low.length&&!pending.length,dpis.length?low.length?`${low.length} of ${dpis.length} interior images are below 300 PPI at their printed size.`:pending.length?`${pending.length} interior image(s) are still loading; check quality again before exporting.`:`${dpis.length} interior image(s) checked; all are at least 300 PPI.`:'No interior images to check.'],
       [!!s.title&&!!s.author,'Book title and author are present.'],
       [!state.coverImageInfo||state.coverImageInfo.dpi>=300,state.coverImageInfo?`Cover artwork estimated at ${Math.floor(state.coverImageInfo.dpi)} PPI at its displayed size; aim for 300 PPI.`:'Cover uses vector artwork and typography only.'],
       [false,'Browser PDF settings and KDP Print Previewer must still be checked manually.']
@@ -190,7 +293,9 @@
     }
     const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!blob)throw new Error('Could not make a PNG');downloadBlob(blob,slug($('bookTitle').value)+'-ebook-cover.png');notify('eBook cover downloaded (1600 × 2560 PNG).');
   }catch(e){console.error(e);notify('Cover PNG export failed: '+e.message,9000);}}
-  function printPdf(type){if(state.busy)return;relayout();const s=getSettings();const g=coverGeometry();const printRoot=$('printRoot');printRoot.innerHTML='';
+  async function printPdf(type){if(state.busy)return;
+    try{await waitForEditorImages();}catch(e){notify('Cannot export: '+e.message,9000);return;}
+    relayout();const s=getSettings();const g=coverGeometry();const printRoot=$('printRoot');printRoot.innerHTML='';
     const style=document.createElement('style');style.id='bookPrintPageStyle';if(type==='cover'){
       style.textContent=`@page { size: ${(g.fullW/72).toFixed(5)}in ${(g.fullH/72).toFixed(5)}in; margin: 0; }`;
       const cover=document.createElement('div');cover.className='print-cover-svg';cover.style.width=`${g.fullW/72}in`;cover.style.height=`${g.fullH/72}in`;cover.innerHTML=coverSvg(false);printRoot.append(cover);
@@ -202,18 +307,28 @@
   }
   function cleanupPrint(){state.busy=false;$('printRoot').innerHTML='';$('bookPrintPageStyle')?.remove();}
   function setTheme(id){if(!palettes[id])return;state.theme=id;document.querySelectorAll('.swatch').forEach(b=>b.classList.toggle('active',b.dataset.theme===id));renderCover();}
-  function saveProject(){const data={format:'book-builder-project',version:1,created:new Date().toISOString(),settings:{},manuscript:$('editor').innerHTML,theme:state.theme,coverArt:state.coverArt,coverImageInfo:state.coverImageInfo};
+  function saveProject(){const data={format:'book-builder-project',version:1,created:new Date().toISOString(),settings:{},manuscript:sanitizeEditorHtml($('editor').innerHTML),theme:state.theme,coverArt:state.coverArt,coverImageInfo:state.coverImageInfo};
     for(const id of inputs)data.settings[id]=$(id).type==='checkbox'?$(id).checked:$(id).value;
     const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});downloadBlob(blob,slug($('bookTitle').value)+'.bookbuilder.json');notify('Project saved as a local file.');}
   async function openProject(file){try{if(file.size>80*1024*1024)throw new Error('Project is larger than the supported 80 MB limit.');const data=JSON.parse(await file.text());if(data.format!=='book-builder-project'||data.version!==1)throw new Error('This is not a version 1 Book Builder project.');
       for(const id of inputs)if(id in(data.settings||{})){$(id).type==='checkbox'?$(id).checked=!!data.settings[id]:$(id).value=data.settings[id];}
       // Project files are user-supplied HTML; sanitize it before putting it in the editor.
-      $('editor').innerHTML=sanitizeEditorHtml(data.manuscript||'');state.coverArt=typeof data.coverArt==='string'&&data.coverArt.startsWith('data:image/')?data.coverArt:null;state.coverImageInfo=data.coverImageInfo||null;setTheme(data.theme||'ink');relayout();notify('Project opened successfully.');
+      clearFigureSelection();state.savedRange=null;$('editor').innerHTML=sanitizeEditorHtml(data.manuscript||'');enhanceEditorFigures();state.coverArt=typeof data.coverArt==='string'&&data.coverArt.startsWith('data:image/')?data.coverArt:null;state.coverImageInfo=data.coverImageInfo||null;setTheme(data.theme||'ink');relayout();relayoutWhenImagesReady();notify('Project opened successfully.');
     }catch(err){notify(`Cannot open project: ${err.message}`,9000);}}
   function sanitizeEditorHtml(markup){const doc=new DOMParser().parseFromString(`<main>${markup}</main>`,'text/html');const root=doc.querySelector('main');const allowed=new Set(['P','H1','H2','BLOCKQUOTE','STRONG','B','EM','I','U','BR','UL','OL','LI','FIGURE','FIGCAPTION','IMG','DIV']);
     const clean=(node)=>{for(const c of [...node.childNodes]){if(c.nodeType===Node.COMMENT_NODE){c.remove();continue;}if(c.nodeType!==Node.ELEMENT_NODE)continue;
       if(!allowed.has(c.tagName)){const text=doc.createTextNode(c.textContent||'');c.replaceWith(text);continue;}
       if(c.tagName==='IMG'){const src=c.getAttribute('src')||'';if(!/^data:image\/(?:png|jpeg|webp);base64,/i.test(src)){c.remove();continue;}const alt=c.getAttribute('alt')||'';for(const a of [...c.attributes])c.removeAttribute(a.name);c.setAttribute('src',src);c.setAttribute('alt',alt);}
+      else if(c.tagName==='FIGURE'){
+        const width=c.dataset.width,align=c.dataset.align,custom=c.dataset.customWidth,newPage=c.dataset.newPage,numbered=c.dataset.numbered;
+        for(const a of [...c.attributes])c.removeAttribute(a.name);
+        if(['auto','50','75','100','custom'].includes(width))c.dataset.width=width;
+        if(['left','center','right'].includes(align))c.dataset.align=align;
+        if(custom!==undefined)c.dataset.customWidth=String(clamp(custom,.5,8,3));
+        if(newPage==='true')c.dataset.newPage='true';
+        if(numbered==='true')c.dataset.numbered='true';
+        clean(c);
+      }
       else{for(const a of [...c.attributes])c.removeAttribute(a.name);clean(c);}
     }};clean(root);return root.innerHTML;}
   function unzipEntries(bytes){const dv=new DataView(bytes);let eocd=-1;for(let i=dv.byteLength-22;i>=Math.max(0,dv.byteLength-65557);i--){if(dv.getUint32(i,true)===0x06054b50){eocd=i;break;}}
@@ -255,14 +370,35 @@
       if(lower.endsWith('.docx')){const result=await docxToHtml(file);content=result.html;note=result.tables?` ${result.tables} table(s) simplified to text rows.`:'';}
       else if(lower.endsWith('.txt')||lower.endsWith('.md')||lower.endsWith('.markdown')){content=plainTextToHtml(await file.text(),!lower.endsWith('.txt'));}
       else throw new Error('Choose DOCX, TXT, or Markdown.');
-      $('editor').innerHTML=sanitizeEditorHtml(content);state.sourceName=file.name;relayout();notify(`Imported ${file.name}.${note}`,7000);
+      clearFigureSelection();state.savedRange=null;$('editor').innerHTML=sanitizeEditorHtml(content);enhanceEditorFigures();state.sourceName=file.name;relayout();relayoutWhenImagesReady();notify(`Imported ${file.name}.${note}`,7000);
       const first= $('editor').querySelector('h1');if(first&&$('bookTitle').value==='The Little Book of Making Things'){$('bookTitle').value=first.textContent;relayout();}
     }catch(err){console.error(err);notify(`Import failed: ${err.message}`,10000);}finally{$('manuscriptFile').value='';}}
   async function importArt(file){if(!file)return;try{if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw new Error('Choose a PNG, JPEG, or WebP image.');if(file.size>15*1024*1024)throw new Error('Artwork is too large (limit: 15 MB).');
       state.coverArt=await readAsDataURL(file);const im=new Image();im.src=state.coverArt;await im.decode();const s=getSettings();const artWidth=(s.w*.82);const artHeight=Math.min(125,s.h*72*.19)/72;
       state.coverImageInfo={width:im.naturalWidth,height:im.naturalHeight,name:file.name,dpi:Math.min(im.naturalWidth/artWidth,im.naturalHeight/artHeight)};$('artworkName').textContent=file.name;renderCover();updateChecks();notify('Cover artwork added.');
     }catch(e){notify('Cannot add artwork: '+e.message,9000);}}
-  function insertImage(file){if(!file)return;readAsDataURL(file).then(src=>{$('editor').focus();document.execCommand('insertHTML',false,`<figure><img src="${src}" alt="Manuscript illustration"></figure><p><br></p>`);scheduleLayout();}).catch(e=>notify(e.message));}
+  async function insertImage(file){
+    if(!file)return;
+    try{
+      if(!/^image\/(png|jpeg|webp)$/.test(file.type))throw new Error('Choose a PNG, JPEG, or WebP image.');
+      if(file.size>15*1024*1024)throw new Error('Illustration is too large (limit: 15 MB per image).');
+      const src=await readAsDataURL(file);const im=new Image();im.src=src;await im.decode();
+      $('editor').focus();
+      const sel=window.getSelection();
+      if(state.savedRange&&$('editor').contains(state.savedRange.commonAncestorContainer)){
+        sel.removeAllRanges();sel.addRange(state.savedRange);
+      }else{
+        const range=document.createRange();range.selectNodeContents($('editor'));range.collapse(false);
+        sel.removeAllRanges();sel.addRange(range);
+      }
+      const existing=new Set($('editor').querySelectorAll('figure'));
+      document.execCommand('insertHTML',false,`<figure data-width="auto" data-align="center"><img src="${src}" alt="Manuscript illustration"></figure><p><br></p>`);
+      enhanceEditorFigures();
+      const inserted=[...$('editor').querySelectorAll('figure')].find(f=>!existing.has(f));
+      if(!inserted)throw new Error('Could not insert illustration at the cursor. Try placing the cursor in a paragraph.');
+      selectFigure(inserted);relayout();
+    }catch(e){notify('Cannot add illustration: '+e.message,9000);}
+  }
   function addChapter(){ $('editor').focus();document.execCommand('insertHTML',false,'<h1>New chapter</h1><p>Begin writing here.</p>');scheduleLayout();}
   function changeParagraph(tag){$('editor').focus();document.execCommand('formatBlock',false,tag);scheduleLayout();}
   function bindEvents(){document.querySelectorAll('.nav-button').forEach(btn=>btn.addEventListener('click',()=>displayPanel(btn.dataset.panel)));
@@ -270,12 +406,40 @@
     $('previewZoom').addEventListener('change',()=>{$('previewPages').style.zoom=$('previewZoom').value;});
     for(const id of inputs){$(id).addEventListener('input',scheduleLayout);$(id).addEventListener('change',scheduleLayout);}
     $('editor').addEventListener('input',scheduleLayout);
-    $('editor').addEventListener('paste',()=>setTimeout(scheduleLayout,80));
-    $('editor').addEventListener('drop',()=>setTimeout(scheduleLayout,100));
+    $('editor').addEventListener('keyup',rememberEditorRange);
+    $('editor').addEventListener('mouseup',rememberEditorRange);
+    $('editor').addEventListener('click',e=>{const fig=e.target.closest('figure');if(fig)selectFigure(fig);});
+    $('editor').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.tagName==='FIGURE'){e.preventDefault();selectFigure(e.target);}});
+    document.addEventListener('selectionchange',rememberEditorRange);
+    $('editor').addEventListener('paste',e=>{
+      const items=[...(e.clipboardData?.items||[])];
+      const picture=items.find(item=>item.kind==='file'&&/^image\/(png|jpeg|webp)$/.test(item.type));
+      if(picture){e.preventDefault();rememberEditorRange();insertImage(picture.getAsFile());return;}
+      const html=e.clipboardData?.getData('text/html');
+      if(html){
+        e.preventDefault();const sanitized=sanitizeEditorHtml(html);
+        document.execCommand('insertHTML',false,sanitized);
+        enhanceEditorFigures();scheduleLayout();relayoutWhenImagesReady();
+      }else setTimeout(scheduleLayout,80);
+    });
+    $('editor').addEventListener('dragover',e=>{if([...e.dataTransfer.items].some(i=>i.kind==='file'))e.preventDefault();});
+    $('editor').addEventListener('drop',e=>{
+      const file=[...e.dataTransfer.files].find(f=>/^image\/(png|jpeg|webp)$/.test(f.type));
+      if(file){e.preventDefault();
+        const range=document.caretRangeFromPoint?.(e.clientX,e.clientY);
+        if(range&&$('editor').contains(range.commonAncestorContainer))state.savedRange=range.cloneRange();
+        insertImage(file);
+      }else setTimeout(scheduleLayout,100);
+    });
     document.querySelectorAll('[data-command]').forEach(btn=>btn.addEventListener('click',()=>{$('editor').focus();document.execCommand(btn.dataset.command);scheduleLayout();}));
     $('paragraphStyle').addEventListener('change',e=>changeParagraph(e.target.value));
     $('insertChapterButton').addEventListener('click',addChapter);
-    $('insertImageButton').addEventListener('click',()=>$('inlineImageFile').click());
+    $('insertImageButton').addEventListener('click',()=>{$('inlineImageFile').click();});
+    for(const id of ['figureWidth','figureAlignment','figureCustomWidth','figureCaption','figureNumbered','figureNewPage']){
+      $(id).addEventListener('input',applyFigureControls);$(id).addEventListener('change',applyFigureControls);
+    }
+    $('deselectFigure').addEventListener('click',clearFigureSelection);
+    $('removeFigure').addEventListener('click',()=>{if(!state.selectedFigure)return;state.selectedFigure.remove();clearFigureSelection();relayout();});
     $('inlineImageFile').addEventListener('change',e=>{insertImage(e.target.files[0]);e.target.value='';});
     const pickManuscript=()=>$('manuscriptFile').click();$('importButton').addEventListener('click',e=>{e.stopPropagation();pickManuscript();});
     $('dropZone').addEventListener('click',e=>{if(e.target.id!=='importButton')pickManuscript();});
@@ -284,7 +448,7 @@
     for(const name of ['dragenter','dragover'])$('dropZone').addEventListener(name,e=>{e.preventDefault();$('dropZone').classList.add('drag-over');});
     for(const name of ['dragleave','drop'])$('dropZone').addEventListener(name,e=>{e.preventDefault();$('dropZone').classList.remove('drag-over');});
     $('dropZone').addEventListener('drop',e=>importManuscript(e.dataTransfer.files[0]));
-    $('sampleButton').addEventListener('click',()=>{if(confirm('Replace the current manuscript editor content with the example?')){$('editor').innerHTML=sample;relayout();}});
+    $('sampleButton').addEventListener('click',()=>{if(confirm('Replace the current manuscript editor content with the example?')){clearFigureSelection();state.savedRange=null;$('editor').innerHTML=sample;relayout();}});
     document.querySelectorAll('.swatch').forEach(b=>b.addEventListener('click',()=>setTheme(b.dataset.theme)));
     $('artworkButton').addEventListener('click',()=>$('coverImage').click());$('coverImage').addEventListener('change',e=>{importArt(e.target.files[0]);e.target.value='';});
     $('removeArtworkButton').addEventListener('click',()=>{state.coverArt=null;state.coverImageInfo=null;$('artworkName').textContent='No image selected';renderCover();updateChecks();});
@@ -300,8 +464,8 @@
     // is an alternate signal that the print interface has been dismissed.
     window.addEventListener('focus',()=>{if(state.busy)setTimeout(cleanupPrint,1200);});
   }
-  function init(){ $('editor').innerHTML=sample;bindEvents();relayout(); }
+  function init(){ $('editor').innerHTML=sample;bindEvents();enhanceEditorFigures();relayout(); }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
   // Small diagnostic read-only API for local regression checks.
-  window.BookBuilderTest={get pageCount(){return state.pageCount;},get settings(){return getSettings();},reflow:relayout,get coverSvg(){return coverSvg(false);}};
+  window.BookBuilderTest={get pageCount(){return state.pageCount;},get settings(){return getSettings();},reflow:relayout,get coverSvg(){return coverSvg(false);},sanitize:sanitizeEditorHtml,measureDpi,get figures(){return [...$('editor').querySelectorAll('figure')].length;}};
 })();
